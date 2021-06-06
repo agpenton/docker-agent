@@ -40,6 +40,24 @@ RUN curl --create-dirs -fsSLo /usr/share/jenkins/agent.jar https://repo.jenkins-
   && chmod 644 /usr/share/jenkins/agent.jar \
   && ln -sf /usr/share/jenkins/agent.jar /usr/share/jenkins/slave.jar
 
+RUN gpg --recv-keys 0x018BA5AD9DF57A4448F0E6CF8BECF1637AD8C79D \
+    && gpg --export 0x018BA5AD9DF57A4448F0E6CF8BECF1637AD8C79D >> /usr/share/keyrings/projectatomic-ppa.gpg \
+    && echo 'deb [signed-by=/usr/share/keyrings/projectatomic-ppa.gpg] http://ppa.launchpad.net/projectatomic/ppa/ubuntu zesty main' > /etc/apt/sources.list.d/projectatomic-ppa.list \
+    && apt update --allow-insecure-repositories \
+    && apt -y install -t containers-golang \
+    && apt -y install bats btrfs-tools git libapparmor-dev libdevmapper-dev libglib2.0-dev libgpgme11-dev libseccomp-dev libselinux1-dev skopeo-containers go-md2man
+
+RUN mkdir ~/buildah \
+    && cd ~/buildah \
+    && export GOPATH=`pwd` \
+    && git clone https://github.com/containers/buildah ./src/github.com/containers/buildah \
+    && cd ./src/github.com/containers/buildah \
+    && PATH=/usr/lib/go-1.13/bin:$PATH make runc all SECURITYTAGS="apparmor seccomp" \
+    && make install install.runc \
+    buildah --help
+
+
+
 USER ${user}
 ENV AGENT_WORKDIR=${AGENT_WORKDIR}
 RUN mkdir /home/${user}/.jenkins && mkdir -p ${AGENT_WORKDIR}
